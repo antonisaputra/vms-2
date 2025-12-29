@@ -1,0 +1,324 @@
+
+<!DOCTYPE html>
+<html lang="id" class="antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VMS Universitas Hamzanwadi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              border: "var(--border)",
+              input: "var(--input)",
+              ring: "var(--ring)",
+              background: "var(--background)",
+              foreground: "var(--foreground)",
+              primary: {
+                DEFAULT: "var(--primary)",
+                foreground: "var(--primary-foreground)",
+              },
+              secondary: {
+                DEFAULT: "var(--secondary)",
+                foreground: "var(--secondary-foreground)",
+              },
+              destructive: {
+                DEFAULT: "var(--destructive)",
+                foreground: "var(--destructive-foreground)",
+              },
+              muted: {
+                DEFAULT: "var(--muted)",
+                foreground: "var(--muted-foreground)",
+              },
+              accent: {
+                DEFAULT: "var(--accent)",
+                foreground: "var(--accent-foreground)",
+              },
+              popover: {
+                DEFAULT: "var(--popover)",
+                foreground: "var(--popover-foreground)",
+              },
+              card: {
+                DEFAULT: "var(--card)",
+                foreground: "var(--card-foreground)",
+              },
+            },
+          }
+        }
+      }
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      
+      :root {
+        color-scheme: light;
+        --background: #f8fafc; /* slate-50 */
+        --foreground: #020617; /* slate-950 */
+        --card: #ffffff;
+        --card-foreground: #020617;
+        --popover: #ffffff;
+        --popover-foreground: #020617;
+        --primary: #16a34a; /* green-600 */
+        --primary-foreground: #f0fdf4; /* green-50 */
+        --secondary: #f1f5f9; /* slate-100 */
+        --secondary-foreground: #0f172a; /* slate-900 */
+        --muted: #f1f5f9;
+        --muted-foreground: #64748b; /* slate-500 */
+        --accent: #e2e8f0; /* slate-200 */
+        --accent-foreground: #0f172a;
+        --destructive: #ef4444; /* red-500 */
+        --destructive-foreground: #fef2f2; /* red-50 */
+        --border: #e2e8f0; /* slate-200 */
+        --input: #e2e8f0;
+        --ring: #16a34a;
+
+        --primary-soft-bg: #dcfce7; /* green-100 */
+        --primary-soft-fg: #15803d; /* green-700 */
+        --secondary-soft-bg: #f1f5f9; /* slate-100 */
+        --secondary-soft-fg: #334155; /* slate-700 */
+        --destructive-soft-bg: #fee2e2; /* red-100 */
+        --destructive-soft-fg: #b91c1c; /* red-700 */
+        --info-soft-bg: #dbeafe; /* blue-100 */
+        --info-soft-fg: #1d4ed8; /* blue-700 */
+        --warning-soft-bg: #fef3c7; /* amber-100 */
+        --warning-soft-fg: #b45309; /* amber-700 */
+
+        --status-onsite-bg: var(--primary-soft-bg);
+        --status-onsite-fg: var(--primary-soft-fg);
+        --status-expected-bg: var(--info-soft-bg);
+        --status-expected-fg: var(--info-soft-fg);
+        --status-checkedout-bg: var(--secondary-soft-bg);
+        --status-checkedout-fg: var(--secondary-soft-fg);
+      }
+
+      .dark {
+        color-scheme: dark;
+        --background: #020617; /* slate-950 */
+        --foreground: #f8fafc; /* slate-50 */
+        --card: #0f172a; /* slate-900 */
+        --card-foreground: #f8fafc;
+        --popover: #0f172a;
+        --popover-foreground: #f8fafc;
+        --primary: #22c55e; /* green-500 */
+        --primary-foreground: #020617;
+        --secondary: #1e293b; /* slate-800 */
+        --secondary-foreground: #f8fafc;
+        --muted: #1e293b;
+        --muted-foreground: #94a3b8; /* slate-400 */
+        --accent: #334155; /* slate-700 */
+        --accent-foreground: #f8fafc;
+        --destructive: #ef4444; /* red-500 */
+        --destructive-foreground: #fef2f2;
+        --border: #1e293b;
+        --input: #1e293b;
+        --ring: #22c55e;
+
+        --primary-soft-bg: rgba(34, 197, 94, 0.15);
+        --primary-soft-fg: #4ade80; /* green-400 */
+        --secondary-soft-bg: rgba(148, 163, 184, 0.15);
+        --secondary-soft-fg: #e2e8f0; /* slate-200 */
+        --destructive-soft-bg: rgba(239, 68, 68, 0.15);
+        --destructive-soft-fg: #fca5a5; /* red-300 */
+        --info-soft-bg: rgba(59, 130, 246, 0.15);
+        --info-soft-fg: #93c5fd; /* blue-300 */
+        --warning-soft-bg: rgba(245, 158, 11, 0.15);
+        --warning-soft-fg: #fcd34d; /* amber-300 */
+        
+        --status-onsite-bg: rgba(34, 197, 94, 0.2);
+        --status-onsite-fg: #86efac;
+        --status-expected-bg: rgba(59, 130, 246, 0.2);
+        --status-expected-fg: #93c5fd;
+        --status-checkedout-bg: rgba(148, 163, 184, 0.2);
+        --status-checkedout-fg: #cbd5e1;
+      }
+
+      @keyframes subtle-gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--background);
+        color: var(--foreground);
+        
+        /* Subtle Animated Gradient Background */
+        background-size: 200% 200%, 16px 16px;
+        animation: subtle-gradient-animation 45s ease infinite;
+        background-image: 
+          /* Dot pattern */
+          radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px),
+          /* Base gradient */
+          linear-gradient(135deg, var(--background) 0%, #f1f5f9 100%);
+      }
+
+      .dark body {
+         background-image: 
+          /* Dot pattern */
+          radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+          /* Base gradient */
+          linear-gradient(135deg, var(--background) 0%, #0f172a 100%);
+      }
+      
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #334155; 
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #475569; 
+      }
+
+      /* Improved Shadow for Dark Mode */
+      .shadow-custom { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05); }
+      .dark .shadow-custom { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -2px rgba(0,0,0,0.3); }
+
+      /* Buttons */
+      .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .btn:active { transform: scale(0.97); }
+      .btn-primary { background-color: var(--primary); color: var(--primary-foreground); }
+      .btn-primary:hover { filter: brightness(1.1); }
+      .btn-primary:disabled { background-color: var(--muted); color: var(--muted-foreground); cursor: not-allowed; opacity: 0.7; }
+      .btn-secondary { background-color: var(--secondary); color: var(--secondary-foreground); border: 1px solid var(--border); }
+      .btn-secondary:hover { background-color: var(--accent); }
+      .btn-destructive { background-color: var(--destructive); color: var(--destructive-foreground); }
+
+      /* Soft Buttons */
+      .btn-soft { padding: 0.75rem 1rem; font-weight: 600; border-radius: 0.5rem; text-align: left; width: 100%; transition: background-color 0.2s; }
+      .btn-soft-primary { background-color: var(--primary-soft-bg); color: var(--primary-soft-fg); }
+      .btn-soft-primary:hover { background-color: var(--primary); color: var(--primary-foreground); }
+      .btn-soft-secondary { background-color: var(--secondary-soft-bg); color: var(--secondary-soft-fg); }
+      .btn-soft-secondary:hover { background-color: var(--accent); }
+      .btn-soft-destructive { background-color: var(--destructive-soft-bg); color: var(--destructive-soft-fg); }
+      .btn-soft-destructive:hover { background-color: var(--destructive); color: var(--destructive-foreground); }
+      .btn-soft-info { background-color: var(--info-soft-bg); color: var(--info-soft-fg); }
+      .btn-soft-info:hover { background-color: #3b82f6; color: white; }
+
+      /* Status Badges */
+      .status-badge { padding: 0.25rem 0.75rem; font-size: 0.75rem; font-weight: 600; border-radius: 9999px; display: inline-flex; }
+      .status-onsite { background-color: var(--status-onsite-bg); color: var(--status-onsite-fg); }
+      .status-expected { background-color: var(--status-expected-bg); color: var(--status-expected-fg); }
+      .status-checkedout { background-color: var(--status-checkedout-bg); color: var(--status-checkedout-fg); }
+      
+      /* Forms */
+      input, select, textarea {
+        background-color: var(--secondary);
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        width: 100%;
+        transition: all 0.2s;
+      }
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--ring);
+        box-shadow: 0 0 0 2px var(--primary-soft-bg);
+        background-color: var(--background);
+      }
+      input::placeholder, textarea::placeholder { color: var(--muted-foreground); }
+      label { color: var(--foreground); font-weight: 500; display: block; margin-bottom: 0.25rem; }
+
+      /* PRINT STYLES - Override everything to be white/black */
+      @media print {
+        body * {
+          visibility: hidden;
+          color: black !important;
+          background-color: white !important;
+        }
+        .printable-area, .printable-area * {
+          visibility: visible;
+        }
+        .printable-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: auto;
+          background-color: white !important;
+          color: black !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        /* Force borders to print */
+        .border, .border-2, .border-4 {
+            border-color: black !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+      }
+
+    </style>
+<script>
+  // Anti-flash script for dark mode
+  try {
+    if (localStorage.getItem('vms-theme') === 'dark' || (!('vms-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  } catch (e) {
+    console.error('Could not access localStorage for theme setting.', e);
+  }
+</script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "@nestjs/passport": "https://aistudiocdn.com/@nestjs/passport@^11.0.5",
+    "@nestjs/core": "https://aistudiocdn.com/@nestjs/core@^11.1.9",
+    "@nestjs/jwt": "https://aistudiocdn.com/@nestjs/jwt@^11.0.1",
+    "@nestjs/common": "https://aistudiocdn.com/@nestjs/common@^11.1.9",
+    "passport-jwt": "https://aistudiocdn.com/passport-jwt@^4.0.1",
+    "typeorm": "https://aistudiocdn.com/typeorm@^0.3.27",
+    "bcrypt": "https://aistudiocdn.com/bcrypt@^6.0.0",
+    "gsap": "https://aistudiocdn.com/gsap@^3.13.0",
+    "@nestjs/config": "https://aistudiocdn.com/@nestjs/config@^4.0.2",
+    "class-validator": "https://aistudiocdn.com/class-validator@^0.14.2",
+    "@nestjs/typeorm": "https://aistudiocdn.com/@nestjs/typeorm@^11.0.0",
+    "class-transformer": "https://aistudiocdn.com/class-transformer@^0.5.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-background text-foreground transition-colors duration-300">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

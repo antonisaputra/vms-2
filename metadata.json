@@ -1,0 +1,7 @@
+{
+  "name": "VMS Universitas Hamzanwadi v2 dev",
+  "description": "Sistem Manajemen Tamu (VMS) Digital Terpusat untuk Universitas Hamzanwadi, menyediakan dasbor untuk resepsionis dan administrator untuk mengelola tamu, keamanan, dan pelaporan.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
