@@ -219,6 +219,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         fetchMembers();
     }, [shouldRefresh]);
 
+    useEffect(() => {
+        const fetchHosts = async () => {
+            // Jika Anda ingin state loading, buat state [isLoadingHosts, setIsLoadingHosts] = useState(false)
+            try {
+                const token = localStorage.getItem('vms_token');
+                if (!token) return;
+
+                // Memanggil API getHostsApi yang sudah ada di services/api.ts
+                const data = await api.getHostsApi();
+
+                if (Array.isArray(data)) {
+                    setHosts(data);
+                }
+            } catch (error) {
+                console.error("Gagal mengambil data hosts:", error);
+            }
+        };
+        fetchHosts();
+    }, [shouldRefresh]);
+
     // 3. Fetch Management Meetings
     useEffect(() => {
         const fetchMeetings = async () => {

@@ -1,4 +1,5 @@
 import React, { useReducer, useState, useRef, useEffect, useCallback } from 'react';
+import { QrReader } from 'react-qr-reader'; // <--- IMPORT BARU
 import { Host, Visitor, Visit } from '../types';
 import {
     CameraIcon, QrCodeIcon, WifiOffIcon, UsersIcon,
@@ -23,6 +24,12 @@ const ClockIcon = ({ className }: { className?: string }) => (
 const DashboardIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
+    </svg>
+);
+// Tambahan Icon Close
+const XIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
 
@@ -227,16 +234,31 @@ const KioskPage: React.FC<KioskPageProps> = (props) => {
     const { hosts, findPreregisteredGuestByCode, checkoutVisitorByCode, isOffline } = useData();
     const [state, dispatch] = useReducer(kioskReducer, initialState);
     const [showCamera, setShowCamera] = useState(false);
+    
+    // STATE UNTUK SCANNER UNDANGAN
+    const [showPreregisterScanner, setShowPreregisterScanner] = useState(false);
+
     const { step, formData, accessCode, preregisteredVisit, lastCheckedInVisit, errorMessage } = state;
 
     const [hostInput, setHostInput] = useState('');
     const [hostSuggestions, setHostSuggestions] = useState<Host[]>([]);
 
     // --- HANDLERS ---
-    const handlePreregisterSubmit = async () => {
+    
+    // MODIFIKASI: Menerima codeOverride opsional untuk hasil scanner
+    const handlePreregisterSubmit = async (codeOverride?: string) => {
+        const codeToUse = typeof codeOverride === 'string' ? codeOverride : accessCode;
+
+        if (!codeToUse) {
+            dispatch({ type: 'SET_ERROR', message: 'Kode tidak boleh kosong.' });
+            return;
+        }
+
         try {
-            const visit = await findPreregisteredGuestByCode(accessCode);
+            const visit = await findPreregisteredGuestByCode(codeToUse);
             if (visit) {
+                // Update accessCode di state agar sinkron
+                dispatch({ type: 'SET_ACCESS_CODE', code: codeToUse });
                 dispatch({ type: 'SET_PREREGISTERED_VISIT', visit });
                 dispatch({ type: 'NAVIGATE', step: 'preregister_confirm' });
             } else {
@@ -247,15 +269,20 @@ const KioskPage: React.FC<KioskPageProps> = (props) => {
         }
     };
 
-    const handlePreregisterConfirm = async () => { // 1. Tambahkan async
+    // HANDLER BARU: Hasil Scan
+    const handlePreregisterScanResult = (result: any, error: any) => {
+        if (result?.text) {
+            setShowPreregisterScanner(false);
+            handlePreregisterSubmit(result.text);
+        }
+    };
+
+    const handlePreregisterConfirm = async () => {
         if (!preregisteredVisit) return;
         const visitorName = preregisteredVisit.visitor?.fullName || 'Tamu';
         const photoUrl = `https://picsum.photos/seed/${visitorName}/400/300`;
 
         try {
-            // 2. Tambahkan await
-            // TypeScript mungkin komplain jika props interface tidak update, 
-            // tapi secara runtime ini wajib await.
             const result = await onPreregisteredCheckIn(preregisteredVisit.id, photoUrl);
 
             if (result.success && result.visit) {
@@ -278,7 +305,6 @@ const KioskPage: React.FC<KioskPageProps> = (props) => {
             visitData.destination = formData.destination;
         }
 
-        // 2. Tambahkan 'await' di sini agar kode menunggu hasil dari server
         const result = await onCheckIn({
             visitor: { ...formData.visitor, id: '', photoUrl: formData.photoUrl },
             purpose: formData.purpose,
@@ -286,7 +312,6 @@ const KioskPage: React.FC<KioskPageProps> = (props) => {
             ...visitData,
         });
 
-        // Sekarang 'result' sudah berisi data yang benar
         if (result.success && result.visit) {
             dispatch({ type: 'SET_FINAL_VISIT', visit: result.visit });
         } else if (result.reason === 'BLACKLISTED') {
@@ -397,15 +422,59 @@ const KioskPage: React.FC<KioskPageProps> = (props) => {
             case 'preregister_input':
             case 'checkout_input':
                 const isCheckout = step === 'checkout_input';
+
+                // --- TAMPILAN SCANNER UNDANGAN ---
+                if (showPreregisterScanner && !isCheckout) {
+                    return (
+                        <div className="max-w-xl mx-auto text-center animate-fade-in-up h-full flex flex-col">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-2xl font-bold text-slate-800">Scan QR Code Undangan</h2>
+                                <button 
+                                    onClick={() => setShowPreregisterScanner(false)}
+                                    className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition"
+                                >
+                                    <XIcon className="w-6 h-6 text-slate-600" />
+                                </button>
+                            </div>
+                            
+                            <div className="relative w-full aspect-square bg-black rounded-3xl overflow-hidden shadow-2xl mb-6">
+                                <QrReader
+                                    onResult={handlePreregisterScanResult}
+                                    constraints={{ facingMode: 'environment' }}
+                                    className="w-full h-full object-cover"
+                                     containerStyle={{ width: '100%', height: '100%', paddingTop: 0 }}
+                                     videoStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
+                                {/* Overlay Frame */}
+                                <div className="absolute inset-0 border-[50px] border-black/50 flex items-center justify-center pointer-events-none">
+                                    <div className="w-64 h-64 border-4 border-indigo-500 rounded-2xl relative">
+                                        <div className="absolute top-2 left-2 w-4 h-4 border-t-4 border-l-4 border-white rounded-tl-sm"></div>
+                                        <div className="absolute top-2 right-2 w-4 h-4 border-t-4 border-r-4 border-white rounded-tr-sm"></div>
+                                        <div className="absolute bottom-2 left-2 w-4 h-4 border-b-4 border-l-4 border-white rounded-bl-sm"></div>
+                                        <div className="absolute bottom-2 right-2 w-4 h-4 border-b-4 border-r-4 border-white rounded-br-sm"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <p className="text-slate-500">Arahkan kode QR undangan Anda ke kamera.</p>
+                        </div>
+                    );
+                }
+
+                // --- TAMPILAN INPUT MANUAL ---
                 return (
                     <div className="max-w-xl mx-auto text-center py-8 animate-fade-in-up">
                         <div className="w-20 h-20 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
                             <QrCodeIcon className="w-10 h-10" />
                         </div>
                         <h2 className="text-3xl font-bold text-slate-800 mb-2">{isCheckout ? 'Kode Check-out' : 'Kode Check-in'}</h2>
-                        <p className="text-slate-500 mb-10 text-lg">Masukkan 6 digit kode unik yang Anda terima.</p>
+                        <p className="text-slate-500 mb-10 text-lg">
+                            {isCheckout 
+                                ? 'Masukkan 6 digit kode unik kunjungan Anda.' 
+                                : 'Masukkan kode atau scan barcode undangan.'}
+                        </p>
 
-                        <div className="relative mb-10">
+                        <div className="relative mb-6">
                             <input
                                 type="text"
                                 value={accessCode}
@@ -417,9 +486,33 @@ const KioskPage: React.FC<KioskPageProps> = (props) => {
                             />
                         </div>
 
-                        <button onClick={isCheckout ? handleCheckoutSubmit : handlePreregisterSubmit} className="w-full py-5 rounded-2xl bg-indigo-600 text-white font-bold text-xl hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition transform hover:-translate-y-1">
-                            Lanjutkan
-                        </button>
+                        <div className="grid grid-cols-1 gap-4">
+                            <button 
+                                onClick={() => isCheckout ? handleCheckoutSubmit() : handlePreregisterSubmit()} 
+                                className="w-full py-5 rounded-2xl bg-indigo-600 text-white font-bold text-xl hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition transform hover:-translate-y-1"
+                            >
+                                Lanjutkan
+                            </button>
+
+                            {/* TOMBOL SCAN QR (Hanya muncul jika bukan checkout) */}
+                            {!isCheckout && (
+                                <>
+                                    <div className="relative flex py-2 items-center">
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                        <span className="flex-shrink-0 mx-4 text-slate-400 text-sm font-semibold">ATAU</span>
+                                        <div className="flex-grow border-t border-slate-200"></div>
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => setShowPreregisterScanner(true)}
+                                        className="w-full py-4 rounded-2xl bg-slate-800 text-white font-bold text-lg hover:bg-slate-900 shadow-lg transition flex items-center justify-center gap-3"
+                                    >
+                                        <CameraIcon className="w-6 h-6" />
+                                        Scan Barcode / QR
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 );
 

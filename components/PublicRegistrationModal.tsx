@@ -10,10 +10,16 @@ import {
     CheckCircleIcon 
 } from './icons'; 
 
+// --- ICON TAMBAHAN ---
+const DownloadIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M12 12.75l-3-3m0 0l-3 3m3-3v7.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
 interface PublicRegistrationModalProps {
   event: Event;
   onClose: () => void;
-  // PERBAIKAN 1: Tambahkan Promise<Visit> karena ini async
   onRegister: (event: Event, visitorData: Omit<Visitor, 'id' | 'photoUrl' | 'phone' | 'idNumber'>) => Promise<Visit>;
 }
 
@@ -21,6 +27,7 @@ const PublicRegistrationModal: React.FC<PublicRegistrationModalProps> = ({ event
   const [formData, setFormData] = useState({ fullName: '', company: '', email: '' });
   const [successData, setSuccessData] = useState<Visit | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,16 +36,44 @@ const PublicRegistrationModal: React.FC<PublicRegistrationModalProps> = ({ event
     setIsSubmitting(true);
     
     try {
-        // PERBAIKAN 2: Tambahkan 'await' di sini!
-        // Kita harus menunggu server membalas sebelum menyimpan data ke state
         const newVisit = await onRegister(event, formData);
-        
         setSuccessData(newVisit);
     } catch (error) {
         console.error("Registrasi gagal", error);
         alert("Gagal mendaftar. Silakan coba lagi.");
     } finally {
         setIsSubmitting(false);
+    }
+  };
+
+  // FUNGSI BARU: DOWNLOAD QR CODE
+  const handleDownloadQR = async () => {
+    if (!successData) return;
+    setIsDownloading(true);
+
+    // Kita request ukuran lebih besar (300x300) agar hasil download tidak pecah
+    const imageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${successData.checkinCode}`;
+    const filename = `TIKET-${successData.visitor.fullName.replace(/\s+/g, '_')}-${successData.checkinCode}.png`;
+
+    try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error('Download error:', error);
+        // Fallback jika fetch gagal (misal masalah CORS), buka di tab baru
+        window.open(imageUrl, '_blank');
+    } finally {
+        setIsDownloading(false);
     }
   };
 
@@ -92,7 +127,7 @@ const PublicRegistrationModal: React.FC<PublicRegistrationModalProps> = ({ event
                         </div>
                         
                         <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Registrasi Berhasil!</h3>
-                        <p className="text-gray-500 text-sm mb-8">
+                        <p className="text-gray-500 text-sm mb-6">
                             Tiket masuk untuk <span className="font-bold">{successData.visitor.fullName}</span> telah dibuat.
                         </p>
 
@@ -104,13 +139,27 @@ const PublicRegistrationModal: React.FC<PublicRegistrationModalProps> = ({ event
                             <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-2">KODE AKSES</p>
                             <p className="text-3xl font-mono font-bold text-gray-800 dark:text-white tracking-widest mb-4">{successData.checkinCode}</p>
                             
-                            <div className="bg-white p-2 rounded-xl inline-block shadow-sm border border-gray-100">
+                            <div className="bg-white p-2 rounded-xl inline-block shadow-sm border border-gray-100 mb-4">
                                 <img 
                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${successData.checkinCode}`} 
                                     alt="QR Code"
                                     className="w-32 h-32 rounded-lg"
                                 />
                             </div>
+
+                            {/* TOMBOL DOWNLOAD QR */}
+                            <button 
+                                onClick={handleDownloadQR}
+                                disabled={isDownloading}
+                                className="flex items-center justify-center gap-2 w-full py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-bold transition-colors"
+                            >
+                                {isDownloading ? 'Mengunduh...' : (
+                                    <>
+                                        <DownloadIcon className="w-4 h-4" />
+                                        Simpan QR Code
+                                    </>
+                                )}
+                            </button>
                         </div>
 
                         <button 
