@@ -18,11 +18,14 @@ export class MeetingsService {
   ) { }
 
   create(createMeetingDto: CreateMeetingDto): Promise<ManagementMeeting> {
-    const meeting = this.meetingsRepository.create({
-      ...createMeetingDto,
-      attendees: [],
-      invitedMemberIds: [],
-    });
+    // Cukup masukkan data dari DTO, biarkan Entity menangani defaultnya
+    const meeting = this.meetingsRepository.create(createMeetingDto);
+
+    // Inisialisasi secara eksplisit jika kolom di DB tidak punya default value
+    meeting.attendees = [];
+    meeting.invitedMemberIds = [];
+    meeting.minutes = "";
+
     return this.meetingsRepository.save(meeting);
   }
 
@@ -48,13 +51,16 @@ export class MeetingsService {
   }
 
   async update(id: string, updateMeetingDto: UpdateMeetingDto): Promise<ManagementMeeting> {
+    // Preload akan mencari data lama dan menggabungkannya dengan data baru (seperti minutes)
     const meeting = await this.meetingsRepository.preload({
       id: id,
       ...updateMeetingDto,
     });
+
     if (!meeting) {
       throw new NotFoundException(`Meeting with ID ${id} not found`);
     }
+
     return this.meetingsRepository.save(meeting);
   }
 

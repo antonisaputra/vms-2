@@ -17,9 +17,9 @@ export class ManagementMeeting {
   location: string;
 
   // PERBAIKAN: Hapus default: '[]'
-  @Column({ type: 'longtext', nullable: true })
-  attendees: MeetingAttendance[];
-
+  @Column({ type: 'json', nullable: true })
+  attendees: any[];
+  
   // PERBAIKAN: Hapus default: '[]'
   @Column({ type: 'json', nullable: true })
   invitedMemberIds: string[];

@@ -154,8 +154,17 @@ const MeetingModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m:
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Pastikan format date (YYYY-MM-DD) dan time (HH:mm) digabung dengan benar
         const dateTime = new Date(`${formData.date}T${formData.time}`);
-        onSave({ title: formData.title, location: formData.location, date: dateTime });
+
+        onSave({
+            title: formData.title,
+            location: formData.location,
+            // Tambahkan .toISOString() agar formatnya menjadi string (e.g., "2023-10-27T10:00:00.000Z")
+            date: dateTime.toISOString() as any
+        });
+
         onClose();
     };
 
@@ -351,9 +360,9 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
             return name.includes(search) || email.includes(search);
         });
     }, [members, memberSearchTerm]);
-    
+
     const filteredMeetings = useMemo(() => (meetings || []).filter(m =>
-        (m.title || '').toLowerCase().includes(meetingSearchTerm.toLowerCase()) || 
+        (m.title || '').toLowerCase().includes(meetingSearchTerm.toLowerCase()) ||
         (m.location || '').toLowerCase().includes(meetingSearchTerm.toLowerCase())
     ), [meetings, meetingSearchTerm]);
 
@@ -363,25 +372,26 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         setMemberModalOpen(true);
     };
 
-    const handleSaveMember = (data: Omit<ManagementMember, 'id'>) => {
+    const handleSaveMember = async (data: Omit<ManagementMember, 'id'>) => {
         if (memberToEdit && updateManagementMember) {
-            updateManagementMember(memberToEdit.id, data);
+            await updateManagementMember(memberToEdit.id, data);
         } else if (addManagementMember) {
-            addManagementMember(data);
+            await addManagementMember(data);
         }
     };
 
-    const handleDeleteMember = (id: string) => {
+    const handleDeleteMember = async (id: string) => {
         if (window.confirm('Apakah Anda yakin ingin menghapus anggota ini?')) {
-            if (deleteManagementMember) deleteManagementMember(id);
+            if (deleteManagementMember) await deleteManagementMember(id);
         }
     }
 
-    const handleSaveMeeting = (data: Omit<ManagementMeeting, 'id' | 'attendees' | 'invitedMemberIds'>) => {
+    // PERBAIKAN: Fungsi ini sekarang ASYNC agar menunggu database sebelum modal tutup
+    const handleSaveMeeting = async (data: Omit<ManagementMeeting, 'id' | 'attendees' | 'invitedMemberIds'>) => {
         if (meetingToEdit && updateMeeting) {
-            updateMeeting(meetingToEdit.id, data);
+            await updateMeeting(meetingToEdit.id, data);
         } else if (createManagementMeeting) {
-            createManagementMeeting(data);
+            await createManagementMeeting(data);
         }
     };
 

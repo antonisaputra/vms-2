@@ -13,6 +13,7 @@ export class MeetingsController {
 
   @Post()
   create(@Body() createMeetingDto: CreateMeetingDto) {
+    console.log("Data diterima di Backend:", createMeetingDto); // Tambahkan ini
     return this.meetingsService.create(createMeetingDto);
   }
 
