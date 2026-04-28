@@ -16,10 +16,12 @@ export class ManagementMeeting {
   @Column()
   location: string;
 
-  @Column({ type: 'json', default: '[]' })
+  // PERBAIKAN: Hapus default: '[]'
+  @Column({ type: 'longtext', nullable: true })
   attendees: MeetingAttendance[];
 
-  @Column({ type: 'json', default: '[]' })
+  // PERBAIKAN: Hapus default: '[]'
+  @Column({ type: 'json', nullable: true })
   invitedMemberIds: string[];
 
   @Column({ type: 'text', nullable: true })

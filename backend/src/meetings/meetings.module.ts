@@ -1,13 +1,15 @@
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ManagementMeeting } from './meeting.entity';
-import { MeetingsController } from './meetings.controller';
 import { MeetingsService } from './meetings.service';
-import { MembersModule } from '../members/members.module'; // Import MembersModule if you need member services
+import { MeetingsController } from './meetings.controller';
+import { ManagementMeeting } from './meeting.entity';
+import { ManagementMember } from '../members/member.entity'; // Impor Entity Member
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ManagementMeeting]), MembersModule], // MembersModule might not be needed if not directly used in service
+  imports: [
+    // Tambahkan ManagementMember di sini agar Repository-nya tersedia untuk MeetingsService
+    TypeOrmModule.forFeature([ManagementMeeting, ManagementMember])
+  ],
   controllers: [MeetingsController],
   providers: [MeetingsService],
 })

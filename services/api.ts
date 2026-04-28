@@ -431,13 +431,7 @@ export const addActivityLogApi = async (log: Omit<ActivityLog, 'id' | 'timestamp
 
 // services/api.ts
 
-export const markMeetingAttendanceApi = async (
-    meetingId: string, 
-    memberId: string, 
-    signature: string
-): Promise<{ success: boolean; memberName: string }> => {
-    console.log(`[API] POST ${API_BASE_URL}/meetings/${meetingId}/attendance`, { memberId });
-    
+export const markMeetingAttendanceApi = async (meetingId: string, memberId: string, signature: string) => {
     const response = await fetch(`${API_BASE_URL}/meetings/${meetingId}/attendance`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -445,9 +439,7 @@ export const markMeetingAttendanceApi = async (
     });
 
     if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || 'Gagal menyimpan absensi');
+        throw new Error('Gagal menyimpan ke database');
     }
-    
     return await response.json();
 };

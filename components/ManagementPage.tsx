@@ -213,12 +213,12 @@ const ManagementAnalytics: React.FC<{ members: ManagementMember[], meetings: Man
     const analyticsData = useMemo(() => {
         const sortedMeetings = [...meetings].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         const meetingLabels = sortedMeetings.map(m => m.title.length > 20 ? m.title.substring(0, 20) + '...' : m.title);
-        const attendeeCounts = sortedMeetings.map(m => m.attendees.length);
-        const invitedCounts = sortedMeetings.map(m => m.invitedMemberIds.length);
+        const attendeeCounts = sortedMeetings.map(m => (m.attendees || []).length);
+        const invitedCounts = sortedMeetings.map(m => (m.invitedMemberIds || []).length);
 
         const facultyCounts: { [key: string]: number } = {};
         sortedMeetings.forEach(m => {
-            m.attendees.forEach(a => {
+            (m.attendees || []).forEach(a => {
                 const member = members.find(mem => mem.id === a.memberId);
                 if (member) {
                     facultyCounts[member.faculty] = (facultyCounts[member.faculty] || 0) + 1;
@@ -227,7 +227,7 @@ const ManagementAnalytics: React.FC<{ members: ManagementMember[], meetings: Man
         });
 
         const topMembers = Object.entries(sortedMeetings.reduce((acc, m) => {
-            m.attendees.forEach(a => acc[a.memberId] = (acc[a.memberId] || 0) + 1);
+            (m.attendees || []).forEach(a => acc[a.memberId] = (acc[a.memberId] || 0) + 1);
             return acc;
         }, {} as { [key: string]: number }))
             .map(([id, count]) => ({ member: members.find(m => m.id === id), count }))
@@ -553,8 +553,8 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                                     <span className="flex items-center gap-1"><MapPinIcon className="w-4 h-4 text-purple-500" /> {meeting.location}</span>
                                                 </div>
                                                 <div className="flex gap-3 mt-3 text-xs font-medium">
-                                                    <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{meeting.invitedMemberIds.length} Diundang</span>
-                                                    <span className="px-2 py-1 bg-green-100 rounded text-green-700">{meeting.attendees.length} Hadir</span>
+                                                    <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{(meeting.invitedMemberIds || []).length} Diundang</span>
+                                                    <span className="px-2 py-1 bg-green-100 rounded text-green-700">{(meeting.attendees || []).length} Hadir</span>
                                                 </div>
                                             </div>
                                         </div>

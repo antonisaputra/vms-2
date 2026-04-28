@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ManagementMeeting, ManagementMember } from '../types';
-import Logo from './Logo';
+import Logo from '../assets/logo.png';
 
 // --- INLINE ICONS ---
 const WifiIcon = ({ className }: { className?: string }) => (
@@ -83,7 +83,7 @@ const MeetingLiveBoard: React.FC<MeetingLiveBoardProps> = ({ meeting, members, o
             <header className="relative z-20 flex justify-between items-center px-6 h-16 border-b border-white/5 bg-white/[0.02] backdrop-blur-md shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="bg-white p-1 rounded shadow-[0_0_10px_rgba(255,255,255,0.1)]">
-                        <Logo className="h-6 w-auto text-black" />
+                        <img src={Logo} alt="Logo" className="h-6 w-auto text-black" />
                     </div>
                     <div className="h-6 w-px bg-white/10 mx-1"></div>
                     <div>

@@ -45,7 +45,7 @@ interface DataContextType {
     deleteManagementMeeting: (id: string) => Promise<void>;
     duplicateManagementMeeting: (id: string) => Promise<void>;
     inviteMembersToMeeting: (meetingId: string, memberIds: string[]) => Promise<{ success: boolean; count: number }>;
-    
+
     // PERBAIKAN: Sesuaikan nama fungsi dengan yang dipanggil di Modal
     markMeetingAttendance: (meetingId: string, identifier: string, signatureDataUrl: string) => Promise<{ success: boolean; memberName?: string; message?: string }>;
     removeMeetingAttendance: (meetingId: string, memberId: string) => Promise<void>;
@@ -96,47 +96,20 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // --- IMPLEMENTASI MARK ATTENDANCE (DIPERBAIKI) ---
     const markMeetingAttendance = async (meetingId: string, identifier: string, signatureDataUrl: string) => {
         try {
-            // Cari member berdasarkan NIDN atau ID (karena identifier dari modal bisa berupa NIDN)
             const member = managementMembers.find(m => m.nidn === identifier || m.id === identifier);
-            
-            if (!member) {
-                return { success: false, message: 'Anggota dengan NIDN tersebut tidak terdaftar.' };
+            if (!member) return { success: false, message: 'NIDN tidak terdaftar' };
+
+            // Panggil fungsi API yang sudah dibuat di langkah 3
+            const result = await api.markMeetingAttendanceApi(meetingId, member.id, signatureDataUrl);
+
+            if (result.success) {
+                refreshUserData(); // Refresh data agar UI terupdate
+                return { success: true, memberName: result.memberName };
             }
-
-            // Panggil API (Pastikan markMeetingAttendanceApi sudah ada di api.ts)
-            // Jika belum ada, gunakan api.updateManagementMeetingApi atau endpoint spesifik
-            const response = await fetch(`http://127.0.0.1:3000/api/meetings/${meetingId}/attendance`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('vms_token')}`
-                },
-                body: JSON.stringify({ memberId: member.id, signature: signatureDataUrl })
-            });
-
-            if (!response.ok) throw new Error('Gagal menyimpan ke database');
-
-            const result = await response.json();
-
-            // Update State Lokal
-            setManagementMeetings(prev => prev.map(m => {
-                if (m.id === meetingId) {
-                    const exists = m.attendees.some(a => a.memberId === member.id);
-                    if (!exists) {
-                        return {
-                            ...m,
-                            attendees: [...m.attendees, { memberId: member.id, checkInTime: new Date(), signatureDataUrl }]
-                        };
-                    }
-                }
-                return m;
-            }));
-
-            addActivity('system', `Absensi rapat: ${member.fullName} hadir.`);
-            return { success: true, memberName: member.fullName };
-        } catch (error: any) {
+            return { success: false, message: 'Gagal mencatat kehadiran' };
+        } catch (error) {
             console.error("Error markAttendance:", error);
-            return { success: false, message: 'Server tidak merespon.' };
+            return { success: false, message: 'Koneksi database terputus' };
         }
     };
 
@@ -199,33 +172,33 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         visits, hosts, isLoadingVisits: false, isLoadingHosts: false,
         preregisterGuest: (d) => ({ id: 'temp', ...d } as Visit), // Dummy implementation
         checkInVisitor: async (d) => ({ success: true }),
-        checkoutVisitor: async (id) => {},
+        checkoutVisitor: async (id) => { },
         checkoutVisitorByCode: (c) => ({ success: true }),
         visitorTrends: { onSite: [], expected: [] },
         activityLog, calendarEvents, isLoadingActivityLog: false,
         isOffline, offlineQueueCount: 0, setOffline: (s) => 0,
-        managementMembers, isLoadingMembers, addManagementMember, 
-        updateManagementMember: async (id, d) => {}, 
+        managementMembers, isLoadingMembers, addManagementMember,
+        updateManagementMember: async (id, d) => { },
         deleteManagementMember,
         importManagementMembers: async (d) => 0,
         managementMeetings, isLoadingMeetings,
-        createManagementMeeting: async (d) => {},
-        updateMeeting: async (id, d) => {},
-        deleteManagementMeeting: async (id) => {},
-        duplicateManagementMeeting: async (id) => {},
+        createManagementMeeting: async (d) => { },
+        updateMeeting: async (id, d) => { },
+        deleteManagementMeeting: async (id) => { },
+        duplicateManagementMeeting: async (id) => { },
         inviteMembersToMeeting: async (mid, ids) => ({ success: true, count: ids.length }),
         markMeetingAttendance, // Gunakan fungsi yang sudah diperbaiki
-        removeMeetingAttendance: async (mid, memid) => {},
-        events, isLoadingEvents, createEvent: async (e) => {},
+        removeMeetingAttendance: async (mid, memid) => { },
+        events, isLoadingEvents, createEvent: async (e) => { },
         blacklist, users, isLoadingUsers, auditLog,
-        addToBlacklist: async (p) => {},
-        registerForEvent: async (e, v) => {},
-        checkInEventGuest: async (id) => {},
+        addToBlacklist: async (p) => { },
+        registerForEvent: async (e, v) => { },
+        checkInEventGuest: async (id) => { },
         purgeOldVisits: (m) => 0,
         runAutoCheckout: () => 0,
-        addUser: async (u) => {},
-        updateUser: async (id, d) => {},
-        deleteUser: async (id) => {},
+        addUser: async (u) => { },
+        updateUser: async (id, d) => { },
+        deleteUser: async (id) => { },
         refreshUserData,
         checkInPreregisteredGuest: async (id, p) => ({ success: true }),
         findPreregisteredGuestByCode: async (c) => null

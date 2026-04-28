@@ -9,7 +9,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('meetings')
 export class MeetingsController {
-  constructor(private readonly meetingsService: MeetingsService) {}
+  constructor(private readonly meetingsService: MeetingsService) { }
 
   @Post()
   create(@Body() createMeetingDto: CreateMeetingDto) {
@@ -36,19 +36,28 @@ export class MeetingsController {
   remove(@Param('id') id: string) {
     return this.meetingsService.remove(id);
   }
-  
+
   @Post(':id/duplicate')
   duplicate(@Param('id') id: string) {
-      return this.meetingsService.duplicate(id);
+    return this.meetingsService.duplicate(id);
   }
 
   @Post(':id/invite')
   inviteMembers(@Param('id') id: string, @Body() inviteMembersDto: InviteMembersDto) {
-      return this.meetingsService.inviteMembers(id, inviteMembersDto.memberIds);
+    return this.meetingsService.inviteMembers(id, inviteMembersDto.memberIds);
   }
-  
+
   @Delete(':id/attendance/:memberId')
   removeAttendance(@Param('id') id: string, @Param('memberId') memberId: string) {
-      return this.meetingsService.removeAttendance(id, memberId);
+    return this.meetingsService.removeAttendance(id, memberId);
+  }
+
+  @Post(':id/attendance') // Endpoint ini yang dicari oleh frontend
+  async addAttendance(
+    @Param('id') id: string,
+    @Body() attendanceData: { memberId: string; signature: string }
+  ) {
+    // Panggil service untuk menyimpan ke database MySQL
+    return this.meetingsService.addAttendance(id, attendanceData.memberId, attendanceData.signature);
   }
 }
