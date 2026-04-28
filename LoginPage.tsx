@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
-import Logo from './components/Logo';
+import Logo from './assets/logo.png';
 import { useAuth } from './context/AuthContext';
 import { MailIcon, LockIcon, ArrowRightIcon } from './components/icons';
 
@@ -111,7 +111,7 @@ const LoginPage: React.FC = () => {
 
            <div className="relative z-10">
               <div className="inline-block p-3 bg-white/10 rounded-xl backdrop-blur-sm border border-white/10 mb-6 shadow-lg shadow-emerald-900/20">
-                <Logo className="h-12 w-auto" />
+                <img src={Logo} alt="Logo" className="h-12 w-auto" />
               </div>
               <h1 className="text-4xl font-bold leading-tight tracking-tight mb-4">
                 Sistem Manajemen <br/>
@@ -127,7 +127,7 @@ const LoginPage: React.FC = () => {
                  <div className="h-px w-8 bg-emerald-500/50"></div>
                  <span className="font-mono text-emerald-500/80">VMS Secure Access 2.0</span>
               </div>
-              <p className="mt-2 opacity-60">&copy; {new Date().getFullYear()} <span className="text-white font-medium">Universitas Hamzanwadi</span>.</p>
+              <p className="mt-2 opacity-60">&copy; {new Date().getFullYear()} <span className="text-white font-medium">Universitas Hamzanwadi (JAT)</span>.</p>
            </div>
         </div>
 
@@ -136,7 +136,7 @@ const LoginPage: React.FC = () => {
           <div ref={formRef} className="w-full max-w-sm relative z-10">
             
             <div className="lg:hidden text-center mb-8">
-              <Logo className="h-14 mx-auto" />
+              <img src={Logo} alt="Logo" className="h-14 mx-auto" />
             </div>
 
             <div className="mb-8">

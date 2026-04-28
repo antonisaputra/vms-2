@@ -22,10 +22,5 @@ export class User {
     enum: UserRole,
     default: UserRole.Receptionist,
   })
-  role: UserRole;
-
-  @BeforeInsert()
-  async hashPassword() {
-    this.password = await bcrypt.hash(this.password, 10);
-  }
+  role: UserRole;y
 }

@@ -65,14 +65,16 @@ const VisitorsPage: React.FC<VisitorsPageProps> = ({ onManualCheckin, onOpenVisi
   const [isFiltering, setIsFiltering] = useState(false);
   const [displayedVisits, setDisplayedVisits] = useState<Visit[]>([]);
 
+  // PERBAIKAN: Menambahkan pengecekan ( || '') agar tidak error toLowerCase
   const sortedAndFilteredVisits = useMemo(() => {
     let filtered = visits.filter(visit => {
-      const search = debouncedSearchTerm.toLowerCase();
+      const search = (debouncedSearchTerm || '').toLowerCase();
+      
       const matchesSearch = 
-        visit.visitor.fullName.toLowerCase().includes(search) ||
-        (visit.host && visit.host.name.toLowerCase().includes(search)) ||
-        (visit.destination && visit.destination.toLowerCase().includes(search)) ||
-        visit.visitor.company.toLowerCase().includes(search);
+        (visit.visitor.fullName || '').toLowerCase().includes(search) ||
+        (visit.host?.name || '').toLowerCase().includes(search) ||
+        (visit.destination || '').toLowerCase().includes(search) ||
+        (visit.visitor.company || '').toLowerCase().includes(search);
       
       const matchesFilter = statusFilter === 'All' || visit.status === statusFilter;
 
@@ -83,8 +85,8 @@ const VisitorsPage: React.FC<VisitorsPageProps> = ({ onManualCheckin, onOpenVisi
       filtered.sort((a, b) => {
         let aValue, bValue;
         if (sortConfig.key === 'visitor.fullName') {
-            aValue = a.visitor.fullName;
-            bValue = b.visitor.fullName;
+            aValue = (a.visitor.fullName || '');
+            bValue = (b.visitor.fullName || '');
         } else if (sortConfig.key === 'host.name') {
             aValue = a.host?.name || a.destination || '';
             bValue = b.host?.name || b.destination || '';

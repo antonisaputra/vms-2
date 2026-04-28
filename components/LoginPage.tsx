@@ -31,8 +31,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             </button>
           </div>
         </div>
-        <p className="text-center text-white/90 text-sm mt-8 font-medium shadow-sm">
-            &copy; {new Date().getFullYear()} Universitas Hamzanwadi. All rights reserved.
+        <p className="text-center text-white/90 text-sm mt-8 font-medium shadow-sm"> (JAT)
+            &copy; {new Date().getFullYear()} Universitas Hamzanwadi All rights reserved.
         </p>
       </div>
 

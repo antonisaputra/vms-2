@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserRole } from '../types'; 
+import { UserRole } from '../types';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   // --- SEEDING OTOMATIS (DIPERBARUI) ---
   // Menambahkan Admin, Resepsionis, dan Host jika database kosong
@@ -21,43 +21,23 @@ export class UsersService implements OnModuleInit {
     const adminExists = await this.findOneByEmail(adminEmail);
 
     if (!adminExists) {
-      console.log('⚠️ Database User kosong. Melakukan Seeding Data Dummy...');
-      
-      const salt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash('password123', salt);
+      console.log('⚠️ Database User kosong. Melakukan Seeding...');
 
-      // 1. Buat Administrator
-      const admin = this.usersRepository.create({
-        name: 'Super Administrator',
-        email: adminEmail,
-        password: hashedPassword,
-        role: UserRole.Administrator,
-      });
-      await this.usersRepository.save(admin);
+      // Gunakan salt rounds yang standar (10)
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash('password123', saltRounds);
 
-      // 2. Buat Resepsionis
-      const receptionist = this.usersRepository.create({
-        name: 'Resepsionis Utama',
-        email: 'receptionist@hamzanwadi.ac.id',
-        password: hashedPassword,
-        role: UserRole.Receptionist,
-      });
-      await this.usersRepository.save(receptionist);
+      const defaultUsers = [
+        { name: 'Super Admin', email: adminEmail, password: hashedPassword, role: UserRole.Administrator },
+        { name: 'Resepsionis', email: 'receptionist@hamzanwadi.ac.id', password: hashedPassword, role: UserRole.Receptionist },
+        { name: 'Dosen Host', email: 'dosen@hamzanwadi.ac.id', password: hashedPassword, role: UserRole.Host }
+      ];
 
-      // 3. Buat Host (Dosen/Staf)
-      const host = this.usersRepository.create({
-        name: 'Dosen Pengampu',
-        email: 'dosen@hamzanwadi.ac.id',
-        password: hashedPassword,
-        role: UserRole.Host,
-      });
-      await this.usersRepository.save(host);
-
-      console.log('✅ Data User berhasil dibuat!');
-      console.log('   - Admin: admin@hamzanwadi.ac.id');
-      console.log('   - Resepsionis: receptionist@hamzanwadi.ac.id');
-      console.log('   - Host: dosen@hamzanwadi.ac.id');
-      console.log('🔑 Password Default Semua Akun: password123');
+      for (const userData of defaultUsers) {
+        const user = this.usersRepository.create(userData);
+        await this.usersRepository.save(user);
+      }
+      console.log('✅ Seeding berhasil dengan password terenkripsi.');
     }
   }
 
@@ -73,7 +53,7 @@ export class UsersService implements OnModuleInit {
     return this.usersRepository
       .createQueryBuilder('user')
       .where('user.email = :email', { email })
-      .addSelect('user.password') 
+      .addSelect('user.password')
       .getOne();
   }
 
@@ -81,13 +61,10 @@ export class UsersService implements OnModuleInit {
   // Kita hash password secara manual disini agar konsisten dengan update
   // dan tidak bergantung pada @BeforeInsert entity yang mungkin bermasalah
   async create(createUserDto: CreateUserDto): Promise<User> {
-    // 1. Hash password sebelum disimpan
     if (createUserDto.password) {
-      const salt = await bcrypt.genSalt();
-      createUserDto.password = await bcrypt.hash(createUserDto.password, salt);
+      // Gunakan cost factor yang sama (10) agar konsisten
+      createUserDto.password = await bcrypt.hash(createUserDto.password, 10);
     }
-
-    // 2. Simpan user
     const user = this.usersRepository.create(createUserDto);
     return this.usersRepository.save(user);
   }
@@ -95,8 +72,8 @@ export class UsersService implements OnModuleInit {
   // UPDATE
   async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
     if (updateUserDto.password) {
-      const salt = await bcrypt.genSalt();
-      updateUserDto.password = await bcrypt.hash(updateUserDto.password, salt);
+      // Gunakan cost factor yang sama (10)
+      updateUserDto.password = await bcrypt.hash(updateUserDto.password, 10);
     }
 
     const user = await this.usersRepository.preload({

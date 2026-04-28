@@ -9,13 +9,24 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
+  // backend/src/auth/auth.service.ts
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByEmail(email);
-    if (user && (await bcrypt.compare(pass, user.password))) {
-      const { password, ...result } = user;
-      return result;
+
+    if (user) {
+      // DEBUG: Cek apakah password dari DB dan input terbaca
+      console.log('Password Input:', pass);
+      console.log('Password DB (Hash):', user.password);
+
+      const isMatch = await bcrypt.compare(pass, user.password);
+      console.log('Apakah Cocok?:', isMatch);
+
+      if (isMatch) {
+        const { password, ...result } = user;
+        return result;
+      }
     }
     return null;
   }

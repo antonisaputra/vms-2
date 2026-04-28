@@ -2,7 +2,8 @@
 // It has its own in-memory "database".
 import { ManagementMember, ManagementMeeting, Visit, Visitor, BlacklistedPerson, VisitStatus, Event, User, UserRole, Host, ActivityLog } from '../types';
 
-const API_BASE_URL = 'http://localhost:3000/api';
+// const API_BASE_URL = 'https://api-vms.hamzanwadi.ac.id/api';
+const API_BASE_URL = 'http://127.0.0.1:3000/api';
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('vms_token');
@@ -36,20 +37,18 @@ export const checkInVisitApi = async (visitId: string): Promise<Visit> => {
 };
 
 // --- AUTH Functions ---
+// services/api.ts
 export const loginApi = async (credentials: { email: string; password: string }): Promise<{ user: User; token: string }> => {
-    console.log(`[API] POST ${API_BASE_URL}/auth/login`);
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(credentials),
     });
+
     if (!response.ok) {
-        try {
-            const error = await response.json();
-            throw new Error(error.message || 'Login Gagal');
-        } catch (e) {
-            throw new Error('Login Gagal: Server tidak merespon dengan benar.');
-        }
+        // Coba ambil pesan detail dari backend jika ada
+        const errorData = await response.json().catch(() => null); 
+        throw new Error(errorData?.message || `Login Gagal (Status: ${response.status})`);
     }
     return await response.json();
 };
@@ -71,11 +70,16 @@ export const getManagementMembersApi = async () => {
 };
 
 export const addManagementMemberApi = async (data: any) => {
-    const response = await fetch(`${API_BASE_URL}/management-members`, {
+    const response = await fetch(`${API_BASE_URL}/members`, { // Ubah ke /members
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(), // Gunakan helper ini agar token ikut terkirim
         body: JSON.stringify(data)
     });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Gagal menambah anggota');
+    }
     return response.json();
 };
 
@@ -422,5 +426,28 @@ export const addActivityLogApi = async (log: Omit<ActivityLog, 'id' | 'timestamp
         body: JSON.stringify(log),
     });
     if (!response.ok) throw new Error('Failed to add activity log');
+    return await response.json();
+};
+
+// services/api.ts
+
+export const markMeetingAttendanceApi = async (
+    meetingId: string, 
+    memberId: string, 
+    signature: string
+): Promise<{ success: boolean; memberName: string }> => {
+    console.log(`[API] POST ${API_BASE_URL}/meetings/${meetingId}/attendance`, { memberId });
+    
+    const response = await fetch(`${API_BASE_URL}/meetings/${meetingId}/attendance`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ memberId, signature }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || 'Gagal menyimpan absensi');
+    }
+    
     return await response.json();
 };

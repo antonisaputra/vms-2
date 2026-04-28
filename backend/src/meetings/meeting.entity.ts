@@ -24,4 +24,7 @@ export class ManagementMeeting {
 
   @Column({ type: 'text', nullable: true })
   minutes?: string;
+
+  @Column({ type: 'longtext', nullable: true }) // Gunakan longtext untuk Base64 Image
+  signature: string;
 }
