@@ -190,6 +190,30 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     };
 
+    // --- IMPLEMENTASI EVENT ---
+    const createEvent = async (eventData: any) => {
+        try {
+            await api.createEventApi(eventData);
+            // Memicu useEffect fetchData untuk mengambil list event terbaru dari server
+            refreshUserData(); 
+            addActivity('system', `Acara baru dibuat: ${eventData.name}`);
+        } catch (error) {
+            console.error("Gagal menyimpan ke database:", error);
+            throw error; // Lempar error agar modal tidak tertutup jika gagal
+        }
+    };
+
+    const registerForEvent = async (event: any, visitor: any) => {
+        try {
+            const result = await api.registerForEventApi(event, visitor);
+            refreshUserData(); // Ini penting agar registrantCount di EventsPage berubah
+            return result;
+        } catch (error) {
+            console.error("Gagal registrasi event:", error);
+            throw error;
+        }
+    };
+
     // --- VALUE OBJECT: HUBUNGKAN SEMUA FUNGSI KE PROVIDER ---
     const value: DataContextType = {
         visits, hosts, isLoadingVisits: false, isLoadingHosts: false,
@@ -218,10 +242,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markMeetingAttendance,
         removeMeetingAttendance: async (mid, memid) => { await api.removeMeetingAttendanceApi(mid, memid); refreshUserData(); },
 
-        events, isLoadingEvents, createEvent: async (e) => { await api.createEventApi(e); refreshUserData(); },
+        events, isLoadingEvents, createEvent,
         blacklist, users, isLoadingUsers, auditLog,
         addToBlacklist: async (p) => { await api.addBlacklistApi(p); refreshUserData(); },
-        registerForEvent: async (e, v) => { return await api.registerForEventApi(e, v); },
+        registerForEvent,
         checkInEventGuest: async (id) => { return await api.checkInVisitApi(id); },
         purgeOldVisits: (m) => 0,
         runAutoCheckout: () => 0,
