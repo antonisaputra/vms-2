@@ -27,6 +27,6 @@ export class ManagementMember {
   @Column()
   email: string;
 
-  @Column()
+  @Column({ type: 'longtext', nullable: true })
   photoUrl: string;
 }

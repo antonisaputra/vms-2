@@ -1,9 +1,15 @@
 // This file simulates the NestJS/MySQL backend.
 // It has its own in-memory "database".
 import { ManagementMember, ManagementMeeting, Visit, Visitor, BlacklistedPerson, VisitStatus, Event, User, UserRole, Host, ActivityLog } from '../types';
-
+import axios from 'axios';
 // const API_BASE_URL = 'https://api-vms.hamzanwadi.ac.id/api';
 const API_BASE_URL = 'http://127.0.0.1:3000/api';
+
+export const api = axios.create({ // <--- Variabel ini tidak diekspor
+  baseURL: 'http://localhost:3000',
+//   baseURL: 'https://api-vms.hamzanwadi.ac.id/api',
+});
+
 
 const getAuthHeaders = () => {
     const token = localStorage.getItem('vms_token');

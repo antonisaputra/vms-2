@@ -3,21 +3,14 @@ import { ManagementMember, ManagementMeeting } from '../types';
 import {
     UserPlusIcon, IdCardIcon, CalendarPlusIcon, CheckCircleIcon, UsersIcon,
     DownloadIcon, FileTextIcon, FileCheckIcon, MailIcon, AnalyticsIcon,
-    Edit2Icon, Trash2Icon, SearchIcon, MonitorIcon, CopyIcon
+    Edit2Icon, Trash2Icon, SearchIcon, MonitorIcon, CopyIcon, CameraIcon, UploadIcon, ClockIcon,
 } from './icons';
 import Modal from './Modal';
 import NametagModal from './NametagModal';
 import { useData } from '../context/DataContext';
+import QRCode from 'qrcode';
 
 declare const Chart: any;
-
-// --- INLINE ICONS ---
-const MapPinIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-);
-const ClockIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-);
 
 const styles = `
   @keyframes fadeInUp {
@@ -31,19 +24,19 @@ const styles = `
   .delay-200 { animation-delay: 200ms; }
 `;
 
-interface ManagementPageProps {
-    onOpenAttendance: (meeting: ManagementMeeting) => void;
-    onOpenReport: (meeting: ManagementMeeting) => void;
-    onOpenInvite: (meeting: ManagementMeeting) => void;
-    onOpenLiveBoard: (meeting: ManagementMeeting) => void;
-}
-
 // --- MODAL COMPONENTS ---
 
 const MemberModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m: Omit<ManagementMember, 'id'>) => void, memberToEdit?: ManagementMember | null }> = ({ isOpen, onClose, onSave, memberToEdit }) => {
     const [formData, setFormData] = useState({
-        nidn: '', fullName: '', faculty: '', studyProgram: '', position: '', phone: '', email: ''
+        nidn: '', fullName: '', faculty: '', studyProgram: '', position: '', phone: '', email: '', photoUrl: ''
     });
+    
+    // State untuk handle error gambar
+    const [imgError, setImgError] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Foto placeholder jika link mati atau kosong
+    const placeholderImg = `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || 'User')}&background=0D9488&color=fff&size=200`;
 
     useEffect(() => {
         if (memberToEdit) {
@@ -54,21 +47,36 @@ const MemberModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m: 
                 studyProgram: memberToEdit.studyProgram || '',
                 position: memberToEdit.position || '',
                 phone: memberToEdit.phone || '',
-                email: memberToEdit.email || ''
+                email: memberToEdit.email || '',
+                photoUrl: memberToEdit.photoUrl || ''
             });
         } else {
-            setFormData({ nidn: '', fullName: '', faculty: '', studyProgram: '', position: '', phone: '', email: '' });
+            setFormData({ nidn: '', fullName: '', faculty: '', studyProgram: '', position: '', phone: '', email: '', photoUrl: '' });
         }
+        setImgError(false);
     }, [memberToEdit, isOpen]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSave({ ...formData, photoUrl: memberToEdit ? memberToEdit.photoUrl : `https://picsum.photos/seed/${formData.nidn}/200` });
-        onClose();
+        onSave({ ...formData, photoUrl: formData.photoUrl || placeholderImg });
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.name === 'photoUrl') setImgError(false);
         setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    // Fungsi handle upload file lokal
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, photoUrl: reader.result as string });
+                setImgError(false);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     return (
@@ -80,52 +88,111 @@ const MemberModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m: 
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">{memberToEdit ? 'Edit Anggota' : 'Tambah Anggota Baru'}</h2>
-                        <p className="text-sm text-gray-500">Lengkapi data diri anggota manajemen.</p>
+                        <p className="text-sm text-gray-500">Lengkapi profil dan foto anggota manajemen.</p>
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="md:col-span-2 group">
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Nama Lengkap & Gelar</label>
-                        <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" placeholder="Contoh: Dr. Budi Santoso, M.Kom" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">NIDN</label>
-                        <input type="text" name="nidn" value={formData.nidn} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Jabatan</label>
-                        <input type="text" name="position" value={formData.position} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Fakultas</label>
-                        <input type="text" name="faculty" value={formData.faculty} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Program Studi</label>
-                        <input type="text" name="studyProgram" value={formData.studyProgram} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Nomor HP</label>
-                        <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Email</label>
-                        <input type="email" name="email" value={formData.email} onChange={handleChange} required
-                            className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* SECTION: FOTO UPLOAD & PREVIEW */}
+                    <div className="flex flex-col md:flex-row gap-6 items-center bg-gray-50 dark:bg-gray-800/50 p-6 rounded-3xl border border-gray-100 dark:border-gray-700">
+                        <div className="relative group flex-shrink-0">
+                            <div className="w-32 h-32 rounded-3xl overflow-hidden border-4 border-white dark:border-gray-700 shadow-xl bg-white">
+                                <img 
+                                    src={imgError || !formData.photoUrl ? placeholderImg : formData.photoUrl} 
+                                    alt="Preview" 
+                                    className="w-full h-full object-cover"
+                                    onError={() => setImgError(true)}
+                                />
+                            </div>
+                            <button 
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="absolute -bottom-2 -right-2 p-2.5 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 transition-all"
+                            >
+                                <CameraIcon className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 w-full space-y-3">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Upload File Foto</label>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef} 
+                                    onChange={handleFileUpload} 
+                                    accept="image/*" 
+                                    className="hidden" 
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="w-full py-2.5 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl text-sm font-semibold text-gray-500 hover:border-emerald-500 hover:text-emerald-600 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <UploadIcon className="w-4 h-4" /> Pilih Gambar Lokal
+                                </button>
+                            </div>
+                            <div className="relative flex items-center">
+                                <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+                                <span className="flex-shrink mx-4 text-xs text-gray-400 font-bold">ATAU</span>
+                                <div className="flex-grow border-t border-gray-200 dark:border-gray-700"></div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1 ml-1">Link URL Foto</label>
+                                <input 
+                                    type="text" 
+                                    name="photoUrl" 
+                                    value={formData.photoUrl.startsWith('data:') ? '' : formData.photoUrl} 
+                                    onChange={handleChange} 
+                                    placeholder="https://example.com/photo.jpg"
+                                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 outline-none text-sm transition-all" 
+                                />
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="md:col-span-2 pt-6 flex justify-end gap-3">
-                        <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-medium transition-colors">Batal</button>
-                        <button type="submit" className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5">
-                            {memberToEdit ? 'Simpan Perubahan' : 'Tambah Anggota'}
-                        </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="md:col-span-2 group">
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Nama Lengkap & Gelar</label>
+                            <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" placeholder="Contoh: Dr. Budi Santoso, M.Kom" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">NIDN</label>
+                            <input type="text" name="nidn" value={formData.nidn} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Jabatan</label>
+                            <input type="text" name="position" value={formData.position} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Fakultas</label>
+                            <input type="text" name="faculty" value={formData.faculty} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Program Studi</label>
+                            <input type="text" name="studyProgram" value={formData.studyProgram} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Nomor HP</label>
+                            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Email</label>
+                            <input type="email" name="email" value={formData.email} onChange={handleChange} required
+                                className="w-full px-4 py-3 rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 transition-all outline-none" />
+                        </div>
+
+                        <div className="md:col-span-2 pt-6 flex justify-end gap-3">
+                            <button type="button" onClick={onClose} className="px-5 py-2.5 rounded-xl text-gray-600 hover:bg-gray-100 font-medium transition-colors">Batal</button>
+                            <button type="submit" className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg shadow-emerald-500/30 transition-all hover:-translate-y-0.5">
+                                {memberToEdit ? 'Simpan Perubahan' : 'Tambah Anggota'}
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -133,6 +200,7 @@ const MemberModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m: 
     );
 };
 
+// --- MEETING MODAL COMPONENT ---
 const MeetingModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m: Omit<ManagementMeeting, 'id' | 'attendees' | 'invitedMemberIds'>) => void, meetingToEdit?: ManagementMeeting | null }> = ({ isOpen, onClose, onSave, meetingToEdit }) => {
     const [formData, setFormData] = useState({ title: '', date: '', time: '', location: '' });
 
@@ -154,18 +222,12 @@ const MeetingModal: React.FC<{ isOpen: boolean, onClose: () => void, onSave: (m:
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Pastikan format date (YYYY-MM-DD) dan time (HH:mm) digabung dengan benar
         const dateTime = new Date(`${formData.date}T${formData.time}`);
-
         onSave({
             title: formData.title,
             location: formData.location,
-            // Tambahkan .toISOString() agar formatnya menjadi string (e.g., "2023-10-27T10:00:00.000Z")
             date: dateTime.toISOString() as any
         });
-
-        onClose();
     };
 
     return (
@@ -373,10 +435,16 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
     };
 
     const handleSaveMember = async (data: Omit<ManagementMember, 'id'>) => {
-        if (memberToEdit && updateManagementMember) {
-            await updateManagementMember(memberToEdit.id, data);
-        } else if (addManagementMember) {
-            await addManagementMember(data);
+        try {
+            if (memberToEdit && updateManagementMember) {
+                await updateManagementMember(memberToEdit.id, data);
+            } else if (addManagementMember) {
+                await addManagementMember(data);
+            }
+            setMemberModalOpen(false);
+            setMemberToEdit(null);
+        } catch (error) {
+            alert("Gagal menyimpan data anggota");
         }
     };
 
@@ -386,12 +454,41 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
         }
     }
 
-    // PERBAIKAN: Fungsi ini sekarang ASYNC agar menunggu database sebelum modal tutup
     const handleSaveMeeting = async (data: Omit<ManagementMeeting, 'id' | 'attendees' | 'invitedMemberIds'>) => {
-        if (meetingToEdit && updateMeeting) {
-            await updateMeeting(meetingToEdit.id, data);
-        } else if (createManagementMeeting) {
-            await createManagementMeeting(data);
+        try {
+            if (meetingToEdit && updateMeeting) {
+                await updateMeeting(meetingToEdit.id, data);
+            } else if (createManagementMeeting) {
+                await createManagementMeeting(data);
+            }
+            setMeetingModalOpen(false);
+            setMeetingToEdit(null);
+        } catch (error) {
+            alert("Gagal menyimpan agenda rapat");
+        }
+    };
+
+    // --- LOGIKA DOWNLOAD QR DENGAN LIBRARY 'qrcode' (BASE64) ---
+    const handleDownloadQR = async (nidn: string, name: string) => {
+        try {
+            const qrDataUrl = await QRCode.toDataURL(nidn, {
+                width: 1000,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#ffffff'
+                }
+            });
+            
+            const link = document.createElement('a');
+            link.href = qrDataUrl;
+            link.download = `QR_${nidn}_${name.replace(/\s+/g, '_')}.png`; 
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        } catch (err) {
+            console.error(err);
+            alert("Gagal membuat QR Code");
         }
     };
 
@@ -520,7 +617,22 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                             <p className="line-clamp-1">{member.studyProgram}</p>
                                             <p className="font-mono">{member.nidn}</p>
                                         </div>
-                                        <button onClick={() => setMembersToPrint([member])} className="mt-4 w-full py-2 rounded-lg bg-gray-50 hover:bg-emerald-50 text-gray-600 hover:text-emerald-700 text-xs font-bold transition-colors">Cetak Nametag</button>
+                                        
+                                        {/* GRUP TOMBOL DOWNLOAD & CETAK */}
+                                        <div className="grid grid-cols-2 gap-2 mt-4 w-full">
+                                            <button 
+                                                onClick={() => setMembersToPrint([member])} 
+                                                className="py-2 rounded-lg bg-gray-50 hover:bg-emerald-50 text-gray-600 hover:text-emerald-700 text-[10px] font-bold transition-colors border border-gray-100"
+                                            >
+                                                Nametag
+                                            </button>
+                                            <button 
+                                                onClick={() => handleDownloadQR(member.nidn, member.fullName)} 
+                                                className="py-2 rounded-lg bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white text-[10px] font-bold transition-all border border-emerald-100 flex items-center justify-center gap-1"
+                                            >
+                                                <DownloadIcon className="w-3 h-3" /> QR Code
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -560,7 +672,7 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
                                                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-purple-600 transition-colors">{meeting.title}</h3>
                                                 <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                                                     <span className="flex items-center gap-1"><ClockIcon className="w-4 h-4 text-purple-500" /> {new Date(meeting.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
-                                                    <span className="flex items-center gap-1"><MapPinIcon className="w-4 h-4 text-purple-500" /> {meeting.location}</span>
+                                                    <span className="flex items-center gap-1"> {meeting.location}</span>
                                                 </div>
                                                 <div className="flex gap-3 mt-3 text-xs font-medium">
                                                     <span className="px-2 py-1 bg-gray-100 rounded text-gray-600">{(meeting.invitedMemberIds || []).length} Diundang</span>
@@ -593,8 +705,22 @@ const ManagementPage: React.FC<ManagementPageProps> = ({
             {activeTab === 'analytics' && members && meetings && <ManagementAnalytics members={members} meetings={meetings} />}
 
             {/* MODALS */}
-            <MemberModal isOpen={isMemberModalOpen} onClose={() => setMemberModalOpen(false)} onSave={handleSaveMember} memberToEdit={memberToEdit} />
-            <MeetingModal isOpen={isMeetingModalOpen} onClose={() => setMeetingModalOpen(false)} onSave={handleSaveMeeting} meetingToEdit={meetingToEdit} />
+            <MemberModal 
+                key={isMemberModalOpen ? `member-${memberToEdit?.id || 'new'}` : 'closed-member'}
+                isOpen={isMemberModalOpen} 
+                onClose={() => { setMemberModalOpen(false); setMemberToEdit(null); }} 
+                onSave={handleSaveMember} 
+                memberToEdit={memberToEdit} 
+            />
+            
+            <MeetingModal 
+                key={isMeetingModalOpen ? `meeting-${meetingToEdit?.id || 'new'}` : 'closed-meeting'}
+                isOpen={isMeetingModalOpen} 
+                onClose={() => { setMeetingModalOpen(false); setMeetingToEdit(null); }} 
+                onSave={handleSaveMeeting} 
+                meetingToEdit={meetingToEdit} 
+            />
+            
             {membersToPrint && <NametagModal members={membersToPrint} onClose={() => setMembersToPrint(null)} />}
         </div>
     );

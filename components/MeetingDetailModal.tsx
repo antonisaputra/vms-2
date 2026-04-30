@@ -21,7 +21,7 @@ const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({ meeting, member
         // Jika data 'meeting' dari props berubah (karena setManagementMeetings di context),
         // maka isi form 'minutesText' dipaksa mengikuti data terbaru.
         setMinutesText(meeting.minutes || '');
-    }, [meeting.minutes]); // Memantau perubahan spesifik pada kolom minutes
+    }, [meeting.id, meeting.minutes]); // Memantau perubahan spesifik pada kolom minutes
 
     const handleSaveMinutes = async () => {
         if (onUpdateMeeting) {
@@ -184,7 +184,12 @@ const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({ meeting, member
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-lg font-bold uppercase">II. Notulensi Rapat</h3>
                             {onUpdateMeeting && (
-                                <button onClick={() => setIsEditingMinutes(!isEditingMinutes)} className="no-print text-sm text-blue-600 flex items-center hover:underline font-semibold">
+                                <button onClick={() => {
+                                    if (isEditingMinutes) {
+                                        setMinutesText(meeting.minutes || ''); // Kembalikan ke teks semula jika klik Batal Edit
+                                    }
+                                    setIsEditingMinutes(!isEditingMinutes);
+                                }} className="no-print text-sm text-blue-600 flex items-center hover:underline font-semibold">
                                     <Edit2Icon className="w-4 h-4 mr-1" />
                                     {isEditingMinutes ? 'Batal Edit' : 'Edit Notulensi'}
                                 </button>
@@ -206,13 +211,13 @@ const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({ meeting, member
                         ) : (
                             /* Tampilan teks notulensi setelah simpan */
                             <div className="border border-black min-h-[150px] p-4 text-sm whitespace-pre-wrap text-black bg-white">
-                                {meeting.minutes || <span className="italic text-gray-400">Belum ada notulensi yang dicatat.</span>}
+                                {minutesText || <span className="italic text-gray-400">Belum ada notulensi yang dicatat.</span>}
                             </div>
                         )}
 
                         {/* Area tersembunyi khusus untuk Cetak PDF agar format tetap rapi */}
                         <div className="hidden print:block border border-black min-h-[150px] p-4 text-sm whitespace-pre-wrap text-black">
-                            {meeting.minutes || "Belum ada notulensi."}
+                            {minutesText || "Belum ada notulensi."}
                         </div>
                     </div>
 
