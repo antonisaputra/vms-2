@@ -60,6 +60,7 @@ interface DataContextType {
     updateUser: (id: string, data: any) => Promise<void>;
     deleteUser: (id: string) => Promise<void>;
     refreshUserData: () => void;
+    refreshData: () => void;
     checkInPreregisteredGuest: (visitId: string, photoUrl: string) => Promise<{ success: boolean, visit?: Visit, message?: string }>;
     findPreregisteredGuestByCode: (code: string) => Promise<Visit | null>;
 }
@@ -84,7 +85,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [isLoadingUsers, setIsLoadingUsers] = useState(false);
     const [shouldRefresh, setShouldRefresh] = useState(0);
 
-    const refreshUserData = () => setShouldRefresh(prev => prev + 1);
+    const refreshUserData = () => {
+        // console.log("Refreshing all data...");
+        setShouldRefresh(prev => prev + 1);
+    };
 
     const addActivity = async (type: ActivityLog['type'], text: string) => {
         try {
@@ -195,7 +199,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             await api.createEventApi(eventData);
             // Memicu useEffect fetchData untuk mengambil list event terbaru dari server
-            refreshUserData(); 
+            refreshUserData();
             addActivity('system', `Acara baru dibuat: ${eventData.name}`);
         } catch (error) {
             console.error("Gagal menyimpan ke database:", error);
@@ -242,10 +246,29 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         markMeetingAttendance,
         removeMeetingAttendance: async (mid, memid) => { await api.removeMeetingAttendanceApi(mid, memid); refreshUserData(); },
 
-        events, isLoadingEvents, createEvent,
+        events, isLoadingEvents,
+        createEvent: async (e) => {
+            try {
+                await api.createEventApi(e);
+                // Wajib dipanggil setelah await agar data ditarik ulang dari DB
+                refreshUserData();
+            } catch (err) {
+                console.error("Gagal buat event", err);
+                throw err;
+            }
+        },
+        registerForEvent: async (event, visitor) => {
+            try {
+                const res = await api.registerForEventApi(event, visitor);
+                // Jika admin yang mendaftarkan pendaftar, panggil refresh di sini
+                refreshUserData();
+                return res;
+            } catch (err) {
+                throw err;
+            }
+        },
         blacklist, users, isLoadingUsers, auditLog,
         addToBlacklist: async (p) => { await api.addBlacklistApi(p); refreshUserData(); },
-        registerForEvent,
         checkInEventGuest: async (id) => { return await api.checkInVisitApi(id); },
         purgeOldVisits: (m) => 0,
         runAutoCheckout: () => 0,
@@ -253,6 +276,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updateUser: async (id, d) => { await api.updateUserApi(id, d); refreshUserData(); },
         deleteUser: async (id) => { await api.deleteUserApi(id); refreshUserData(); },
         refreshUserData,
+        refreshData: refreshUserData,
         checkInPreregisteredGuest: async (id, p) => { return await api.checkInVisitApi(id); },
         findPreregisteredGuestByCode: async (c) => { return await api.getVisitByCodeApi(c); }
     };

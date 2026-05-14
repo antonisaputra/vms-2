@@ -10,16 +10,30 @@ import {
     CheckCircleIcon,
     ClockIcon,
     MailIcon,
-    CameraIcon, // Pastikan icon ini ada, atau ganti dengan icon lain
-    XIcon // Pastikan icon ini ada (Icon Close)
+    FilterIcon
 } from './icons';
 import { useStaggerAnimation } from '../hooks/useStaggerAnimation';
 import { gsap } from 'gsap';
+import { useData } from '../context/DataContext';
+
+// Inline Icon untuk tombol Close (X)
+const XIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+// Inline Icon untuk Switch Camera
+const SwitchCameraIcon = ({ className }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+);
 
 interface EventCheckinPageProps {
   event: Event;
   visits: Visit[]; 
-  onCheckIn: (visitId: string) => Promise<{success: boolean; message?: string}>;
+  onCheckIn: (visitId: string) => Promise<any>;
   onBack: () => void;
 }
 
@@ -37,13 +51,13 @@ const ParticipantCard = React.memo<{
         setIsLoading(true);
         try {
             const res = await onCheckIn(p.id);
-            if (res.success) {
-                setFeedback({ type: 'success', message: `${p.visitor.fullName} berhasil check-in.` });
+            if (!res || res.success === false) {
+                setFeedback({ type: 'error', message: res?.message || 'Gagal check-in' });
             } else {
-                setFeedback({ type: 'error', message: res.message || 'Gagal check-in' });
+                setFeedback({ type: 'success', message: `${p.visitor.fullName} berhasil check-in.` });
             }
-        } catch (error) {
-            setFeedback({ type: 'error', message: 'Terjadi kesalahan sistem' });
+        } catch (error: any) {
+            setFeedback({ type: 'error', message: error?.message || 'Terjadi kesalahan sistem' });
         } finally {
             setIsLoading(false);
         }
@@ -85,8 +99,9 @@ const ParticipantCard = React.memo<{
                             TERVERIFIKASI
                         </span>
                         {p.checkInTime && (
-                            <span className="text-[10px] text-emerald-600 mt-1 mr-1 font-medium">
-                                {new Date(p.checkInTime).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}
+                            <span className="text-[10px] text-emerald-700 mt-1.5 font-bold flex items-center gap-1 bg-emerald-100/50 px-2 py-1 rounded-md">
+                                <ClockIcon className="w-3 h-3" />
+                                Masuk: {new Date(p.checkInTime).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'})}
                             </span>
                         )}
                     </div>
@@ -134,8 +149,13 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
   
   // STATE BARU: Untuk Scanner
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const processingRef = useRef(false); // Kunci agar scanner tidak double-trigger
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'checked-in' | 'pending'>('all');
   
   const headerRef = useRef<HTMLDivElement>(null);
+  const { refreshData } = useData();
 
   // Animasi Header
   useEffect(() => {
@@ -146,6 +166,17 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
           );
       }
   }, []);
+
+  // Polling Refresh Data Otomatis
+  useEffect(() => {
+      if (!refreshData) return;
+      
+      const interval = setInterval(() => {
+          refreshData();
+      }, 10000); // Sinkronisasi setiap 10 detik
+      
+      return () => clearInterval(interval);
+  }, [refreshData]);
 
   const eventParticipants = useMemo(() => {
     return visits
@@ -158,11 +189,20 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
   const attendanceRate = totalCount > 0 ? Math.round((checkedInCount / totalCount) * 100) : 0;
 
   const filteredParticipants = useMemo(() => {
-    return eventParticipants.filter(p =>
-      p.visitor.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.checkinCode?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [eventParticipants, searchTerm]);
+    return eventParticipants.filter(p => {
+      const matchesSearch = p.visitor.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            p.checkinCode?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      let matchesStatus = true;
+      if (filterStatus === 'checked-in') {
+          matchesStatus = p.status === VisitStatus.OnSite;
+      } else if (filterStatus === 'pending') {
+          matchesStatus = p.status !== VisitStatus.OnSite;
+      }
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [eventParticipants, searchTerm, filterStatus]);
   
   const listContainerRef = useStaggerAnimation('.participant-card', [filteredParticipants]);
   
@@ -176,9 +216,15 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
   // --- REFACTOR LOGIC CHECK-IN ---
   // Logic ini dipisahkan agar bisa dipanggil oleh Form Submit maupun QR Scanner
   const processCheckInByCode = async (code: string) => {
-    if (!code) return;
+    if (!code || processingRef.current) return; // Cegah eksekusi ganda
+    
+    processingRef.current = true;
+    setIsValidating(true);
 
-    const participant = eventParticipants.find(p => p.checkinCode?.toUpperCase() === code.toUpperCase());
+    // Bersihkan spasi kosong di awal/akhir
+    const cleanCode = code.trim().toUpperCase();
+
+    const participant = eventParticipants.find(p => p.checkinCode?.trim().toUpperCase() === cleanCode);
 
     if (participant) {
         if(participant.status === VisitStatus.OnSite) {
@@ -187,18 +233,28 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
             // Tutup scanner jika berhasil ditemukan (opsional, bisa dibiarkan terbuka untuk scan massal)
             setIsScannerOpen(false); 
             
-            const result = await onCheckIn(participant.id);
-            if(result.success) {
-                setFeedback({ type: 'success', message: `Selamat datang, ${participant.visitor.fullName}!` });
-            } else {
-                setFeedback({ type: 'error', message: result.message || `Gagal melakukan check-in.` });
+            try {
+                const result = await onCheckIn(participant.id);
+                if (!result || result.success === false) {
+                    setFeedback({ type: 'error', message: result?.message || `Gagal melakukan check-in.` });
+                } else {
+                    setFeedback({ type: 'success', message: `Selamat datang, ${participant.visitor.fullName}!` });
+                }
+            } catch (error: any) {
+                setFeedback({ type: 'error', message: error?.message || 'Terjadi kesalahan sistem' });
             }
         }
     } else {
-      setFeedback({ type: 'error', message: `Kode "${code}" tidak ditemukan.` });
+      setFeedback({ type: 'error', message: `Kode "${cleanCode}" tidak ditemukan.` });
     }
     // Reset input manual
     setCheckinCode('');
+    setIsValidating(false);
+    
+    // Jeda 1.5 detik sebelum bisa scan kode lain (anti spam/double request)
+    setTimeout(() => {
+        processingRef.current = false;
+    }, 1500);
   };
 
   const handleCodeSubmit = async (e: React.FormEvent) => {
@@ -307,11 +363,20 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
                     </div>
                     <button 
                         type="submit" 
-                        disabled={!checkinCode}
+                        disabled={!checkinCode || isValidating}
                         className="w-full mt-4 py-3.5 bg-gray-900 hover:bg-emerald-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white rounded-xl font-bold shadow-xl shadow-gray-200 hover:shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
-                        <span>Validasi Kode</span>
-                        <ArrowRightIcon className="w-5 h-5" />
+                        {isValidating ? (
+                            <>
+                                <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                <span>Memvalidasi...</span>
+                            </>
+                        ) : (
+                            <>
+                                <span>Validasi Kode</span>
+                                <ArrowRightIcon className="w-5 h-5" />
+                            </>
+                        )}
                     </button>
                 </form>
 
@@ -350,22 +415,44 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
             <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col min-h-[600px]">
                 {/* Search Header (Sama) */}
                 <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 bg-white/80 backdrop-blur-md z-20 rounded-t-3xl">
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        Daftar Tamu
-                        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full border border-gray-200">{filteredParticipants.length}</span>
-                    </h2>
+                    <div className="flex flex-col">
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            Daftar Tamu
+                            <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full border border-gray-200">{filteredParticipants.length}</span>
+                        </h2>
+                        <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1.5 mt-1 uppercase tracking-wider">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                            Live Update Aktif
+                        </span>
+                    </div>
                     
-                    <div className="relative group w-full sm:w-72">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <SearchIcon className="w-4 h-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <div className="relative group w-full sm:w-44">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <FilterIcon className="w-4 h-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                            </div>
+                            <select
+                                value={filterStatus}
+                                onChange={e => setFilterStatus(e.target.value as any)}
+                                className="block w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none appearance-none cursor-pointer"
+                            >
+                                <option value="all">Semua Status</option>
+                                <option value="checked-in">Sudah Hadir</option>
+                                <option value="pending">Belum Hadir</option>
+                            </select>
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Cari nama peserta..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
-                        />
+                        <div className="relative group w-full sm:w-64">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <SearchIcon className="w-4 h-4 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Cari nama atau kode tiket..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                                className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                            />
+                        </div>
                     </div>
                 </div>
 
@@ -400,17 +487,21 @@ const EventCheckinPage: React.FC<EventCheckinPageProps> = ({ event, visits, onCh
                     <h3 className="font-bold text-lg flex items-center gap-2">
                         <QrCodeIcon className="w-5 h-5"/> Scan QR Code
                     </h3>
-                    <button onClick={() => setIsScannerOpen(false)} className="p-1 hover:bg-gray-700 rounded-full transition-colors">
-                        {/* Ganti dengan icon Close/X jika belum ada, pakai text sementara */}
-                        <div className="w-6 h-6 flex items-center justify-center font-bold">✕</div>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')} className="p-1 hover:bg-gray-700 rounded-full transition-colors" title="Ubah Kamera">
+                            <SwitchCameraIcon className="w-6 h-6" />
+                        </button>
+                        <button onClick={() => setIsScannerOpen(false)} className="p-1 hover:bg-gray-700 rounded-full transition-colors" title="Tutup">
+                            <XIcon className="w-6 h-6" />
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="relative aspect-square bg-black">
                      <QrReader
                         onResult={handleScanResult}
-                        constraints={{ facingMode: 'environment' }}
-                        className="w-full h-full"
+                        constraints={{ facingMode: facingMode }}
+                        className={`w-full h-full ${facingMode === 'user' ? 'transform scale-x-[-1]' : ''}`}
                         containerStyle={{ width: '100%', height: '100%' }}
                     />
                     {/* Overlay Scan Frame */}

@@ -64,6 +64,8 @@ export interface Visit {
   destination?: string;
   purpose: string;
   status: VisitStatus;
+  eventId?: string;
+  event?: Event;
   checkInTime: Date;
   checkOutTime?: Date;
   hostPickupTime?: Date;
